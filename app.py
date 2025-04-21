@@ -27,6 +27,9 @@ GMAIL_DOMAIN = 'gmail.com'
 ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', 'eikonsym')
 ADMIN_MASTER_PASSWORD = os.environ.get('ADMIN_MASTER_PASSWORD', 'eikonsym_master')
 
+# Default refresh time in minutes (0 = disabled)
+DEFAULT_REFRESH_TIME = 2
+
 def get_db():
     db = getattr(g, '_database', None)
     if db is None:
@@ -377,14 +380,26 @@ def admin_login():
     
     return render_template('admin_login.html')
 
-@app.route('/admin/dashboard')
+@app.route('/admin/dashboard', methods=['GET', 'POST'])
 def admin_dashboard():
     if not session.get('admin_authenticated'):
         flash('Please login as admin first', 'error')
         return redirect(url_for('admin_login'))
     
+    # Handle refresh time update
+    if request.method == 'POST':
+        try:
+            refresh_time = int(request.form.get('refresh_time', DEFAULT_REFRESH_TIME))
+            session['refresh_time'] = refresh_time
+            flash(f'Refresh time updated to {refresh_time} minutes', 'success')
+        except ValueError:
+            flash('Invalid refresh time value', 'error')
+    
+    # Get or set the refresh time from session
+    refresh_time = session.get('refresh_time', DEFAULT_REFRESH_TIME)
+    
     events = Event.get_all()
-    return render_template('admin_dashboard.html', events=events)
+    return render_template('admin_dashboard.html', events=events, refresh_time=refresh_time)
 
 @app.route('/admin/event/<int:event_id>')
 def admin_view_event(event_id):

@@ -22,10 +22,6 @@
         </div>
         
         <p><small>Created on: {{ event.created_at }}</small></p>
-        
-        <form action="{{ url_for('view_event', event_key=event.key) }}" method="GET">
-            <button type="submit" class="btn btn-primary">Refresh Photos</button>
-        </form>
     </div>
 </div>
 
