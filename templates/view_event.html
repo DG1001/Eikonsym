@@ -21,7 +21,7 @@
             <p>When they send photos to this email, they'll appear here automatically!</p>
         </div>
         
-        <p><small>Created on: {{ event.created_at.strftime('%Y-%m-%d %H:%M') }}</small></p>
+        <p><small>Created on: {{ event.created_at }}</small></p>
         
         <form action="{{ url_for('view_event', event_key=event.key) }}" method="GET">
             <button type="submit" class="btn btn-primary">Refresh Photos</button>
@@ -43,7 +43,7 @@
                     <div class="card-body">
                         <p class="card-text">
                             <small>From: {{ image.sender }}</small><br>
-                            <small>Received: {{ image.received_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                            <small>Received: {{ image.received_at }}</small>
                         </p>
                         <a href="{{ url_for('static', filename='uploads/' + image.filename) }}" 
                            class="btn btn-sm btn-outline-primary" target="_blank">View Full Size</a>

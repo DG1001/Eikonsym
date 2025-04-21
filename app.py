@@ -2,17 +2,16 @@ import os
 import secrets
 import imaplib
 import email
+import sqlite3
 from email.header import decode_header
 import base64
-from flask import Flask, render_template, request, redirect, url_for, flash, session
-from flask_sqlalchemy import SQLAlchemy
+from flask import Flask, render_template, request, redirect, url_for, flash, session, g
 from datetime import datetime
 import re
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = secrets.token_hex(16)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///events.db'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['DATABASE'] = 'events.db'
 app.config['UPLOAD_FOLDER'] = 'static/uploads'
 
 # Ensure upload directory exists
@@ -24,30 +23,99 @@ GMAIL_PASSWORD = os.environ.get('GMAIL_APP_PASSWORD', '')
 GMAIL_PREFIX = 'eikonsym+'
 GMAIL_DOMAIN = 'gmail.com'
 
-db = SQLAlchemy(app)
+def get_db():
+    db = getattr(g, '_database', None)
+    if db is None:
+        db = g._database = sqlite3.connect(app.config['DATABASE'])
+        db.row_factory = sqlite3.Row
+    return db
 
-class Event(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False)
-    description = db.Column(db.Text)
-    key = db.Column(db.String(16), unique=True, nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    images = db.relationship('Image', backref='event', lazy=True)
+@app.teardown_appcontext
+def close_connection(exception):
+    db = getattr(g, '_database', None)
+    if db is not None:
+        db.close()
 
-    @property
-    def email(self):
-        return f"{GMAIL_PREFIX}{self.key}@{GMAIL_DOMAIN}"
+def init_db():
+    with app.app_context():
+        db = get_db()
+        with app.open_resource('schema.sql', mode='r') as f:
+            db.cursor().executescript(f.read())
+        db.commit()
 
-class Image(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    filename = db.Column(db.String(255), nullable=False)
-    original_filename = db.Column(db.String(255))
-    sender = db.Column(db.String(255))
-    received_at = db.Column(db.DateTime, default=datetime.utcnow)
-    event_id = db.Column(db.Integer, db.ForeignKey('event.id'), nullable=False)
+# Create tables if they don't exist
+def create_tables():
+    db = get_db()
+    db.execute('''
+    CREATE TABLE IF NOT EXISTS events (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        description TEXT,
+        key TEXT UNIQUE NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+    ''')
+    db.execute('''
+    CREATE TABLE IF NOT EXISTS images (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        filename TEXT NOT NULL,
+        original_filename TEXT,
+        sender TEXT,
+        received_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        event_id INTEGER,
+        FOREIGN KEY (event_id) REFERENCES events (id)
+    )
+    ''')
+    db.commit()
 
-with app.app_context():
-    db.create_all()
+# Create tables on startup
+create_tables()
+
+class Event:
+    @staticmethod
+    def get_by_key(key):
+        db = get_db()
+        event = db.execute('SELECT * FROM events WHERE key = ?', (key,)).fetchone()
+        return event
+    
+    @staticmethod
+    def get_all():
+        db = get_db()
+        events = db.execute('SELECT * FROM events ORDER BY created_at DESC').fetchall()
+        return events
+    
+    @staticmethod
+    def create(name, description, key):
+        db = get_db()
+        db.execute(
+            'INSERT INTO events (name, description, key) VALUES (?, ?, ?)',
+            (name, description, key)
+        )
+        db.commit()
+        return Event.get_by_key(key)
+    
+    @staticmethod
+    def get_email(key):
+        return f"{GMAIL_PREFIX}{key}@{GMAIL_DOMAIN}"
+
+class Image:
+    @staticmethod
+    def get_by_event_id(event_id):
+        db = get_db()
+        images = db.execute(
+            'SELECT * FROM images WHERE event_id = ? ORDER BY received_at DESC',
+            (event_id,)
+        ).fetchall()
+        return images
+    
+    @staticmethod
+    def create(filename, original_filename, sender, event_id):
+        db = get_db()
+        db.execute(
+            'INSERT INTO images (filename, original_filename, sender, event_id) VALUES (?, ?, ?, ?)',
+            (filename, original_filename, sender, event_id)
+        )
+        db.commit()
 
 def generate_event_key():
     """Generate a unique event key"""
@@ -55,7 +123,9 @@ def generate_event_key():
         key = secrets.token_urlsafe(8)
         # Make sure it's alphanumeric and doesn't contain special characters
         key = re.sub(r'[^a-zA-Z0-9]', '', key)[:12]
-        if not Event.query.filter_by(key=key).first():
+        db = get_db()
+        existing = db.execute('SELECT id FROM events WHERE key = ?', (key,)).fetchone()
+        if not existing:
             return key
 
 def check_emails_for_event(event_key):
@@ -83,7 +153,7 @@ def check_emails_for_event(event_key):
         if not message_ids:
             return True  # No new emails
         
-        event = Event.query.filter_by(key=event_key).first()
+        event = Event.get_by_key(event_key)
         if not event:
             return False
         
@@ -129,15 +199,13 @@ def check_emails_for_event(event_key):
                         f.write(data)
                     
                     # Save to database
-                    new_image = Image(
+                    Image.create(
                         filename=unique_filename,
                         original_filename=filename,
                         sender=sender,
-                        event_id=event.id
+                        event_id=event['id']
                     )
-                    db.session.add(new_image)
         
-        db.session.commit()
         return True
     
     except Exception as e:
@@ -165,27 +233,31 @@ def create_event():
             return redirect(url_for('create_event'))
         
         event_key = generate_event_key()
-        new_event = Event(name=name, description=description, key=event_key)
+        Event.create(name=name, description=description, key=event_key)
         
-        db.session.add(new_event)
-        db.session.commit()
-        
-        flash(f'Event created! Share this email address: {new_event.email}', 'success')
+        flash(f'Event created! Share this email address: {Event.get_email(event_key)}', 'success')
         return redirect(url_for('view_event', event_key=event_key))
     
     return render_template('create_event.html')
 
 @app.route('/event/<event_key>')
 def view_event(event_key):
-    event = Event.query.filter_by(key=event_key).first_or_404()
+    event = Event.get_by_key(event_key)
+    if not event:
+        flash('Event not found', 'error')
+        return redirect(url_for('index'))
     
     # Check for new emails
     check_emails_for_event(event_key)
     
     # Get all images for this event
-    images = Image.query.filter_by(event_id=event.id).order_by(Image.received_at.desc()).all()
+    images = Image.get_by_event_id(event['id'])
     
-    return render_template('view_event.html', event=event, images=images)
+    # Add email property to event dictionary
+    event_with_email = dict(event)
+    event_with_email['email'] = Event.get_email(event_key)
+    
+    return render_template('view_event.html', event=event_with_email, images=images)
 
 @app.route('/find_event', methods=['GET', 'POST'])
 def find_event():
@@ -203,7 +275,7 @@ def find_event():
             return redirect(url_for('find_event'))
         
         event_key = match.group(1)
-        event = Event.query.filter_by(key=event_key).first()
+        event = Event.get_by_key(event_key)
         
         if not event:
             flash('Event not found', 'error')
