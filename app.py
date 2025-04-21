@@ -23,8 +23,9 @@ GMAIL_PASSWORD = os.environ.get('GMAIL_APP_PASSWORD', '')
 GMAIL_PREFIX = 'eikonsym+'
 GMAIL_DOMAIN = 'gmail.com'
 
-# Admin password for creating events
+# Admin passwords
 ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', 'eikonsym')
+ADMIN_MASTER_PASSWORD = os.environ.get('ADMIN_MASTER_PASSWORD', 'eikonsym_master')
 
 def get_db():
     db = getattr(g, '_database', None)
@@ -84,6 +85,12 @@ class Event:
         return event
     
     @staticmethod
+    def get_by_id(id):
+        db = get_db()
+        event = db.execute('SELECT * FROM events WHERE id = ?', (id,)).fetchone()
+        return event
+    
+    @staticmethod
     def get_all():
         db = get_db()
         events = db.execute('SELECT * FROM events ORDER BY created_at DESC').fetchall()
@@ -100,6 +107,19 @@ class Event:
         return Event.get_by_key(key)
     
     @staticmethod
+    def delete(event_id):
+        db = get_db()
+        # First delete all images associated with this event
+        images = Image.get_by_event_id(event_id)
+        for image in images:
+            Image.delete(image['id'])
+        
+        # Then delete the event
+        db.execute('DELETE FROM events WHERE id = ?', (event_id,))
+        db.commit()
+        return True
+    
+    @staticmethod
     def get_email(key):
         return f"{GMAIL_PREFIX}{key}@{GMAIL_DOMAIN}"
 
@@ -114,6 +134,12 @@ class Image:
         return images
     
     @staticmethod
+    def get_by_id(id):
+        db = get_db()
+        image = db.execute('SELECT * FROM images WHERE id = ?', (id,)).fetchone()
+        return image
+    
+    @staticmethod
     def create(filename, original_filename, sender, event_id):
         db = get_db()
         db.execute(
@@ -121,6 +147,26 @@ class Image:
             (filename, original_filename, sender, event_id)
         )
         db.commit()
+    
+    @staticmethod
+    def delete(image_id):
+        db = get_db()
+        # Get the image filename first
+        image = Image.get_by_id(image_id)
+        if image:
+            # Delete the file from disk
+            file_path = os.path.join(app.config['UPLOAD_FOLDER'], image['filename'])
+            try:
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+            except Exception as e:
+                print(f"Error deleting file: {e}")
+            
+            # Delete from database
+            db.execute('DELETE FROM images WHERE id = ?', (image_id,))
+            db.commit()
+            return True
+        return False
 
 def generate_event_key():
     """Generate a unique event key"""
@@ -316,6 +362,79 @@ def find_event():
         return redirect(url_for('view_event', event_key=event_key))
     
     return render_template('find_event.html')
+
+@app.route('/admin', methods=['GET', 'POST'])
+def admin_login():
+    if request.method == 'POST':
+        password = request.form.get('password')
+        
+        if not password or password != ADMIN_MASTER_PASSWORD:
+            flash('Invalid admin password', 'error')
+            return redirect(url_for('admin_login'))
+        
+        session['admin_authenticated'] = True
+        return redirect(url_for('admin_dashboard'))
+    
+    return render_template('admin_login.html')
+
+@app.route('/admin/dashboard')
+def admin_dashboard():
+    if not session.get('admin_authenticated'):
+        flash('Please login as admin first', 'error')
+        return redirect(url_for('admin_login'))
+    
+    events = Event.get_all()
+    return render_template('admin_dashboard.html', events=events)
+
+@app.route('/admin/event/<int:event_id>')
+def admin_view_event(event_id):
+    if not session.get('admin_authenticated'):
+        flash('Please login as admin first', 'error')
+        return redirect(url_for('admin_login'))
+    
+    event = Event.get_by_id(event_id)
+    if not event:
+        flash('Event not found', 'error')
+        return redirect(url_for('admin_dashboard'))
+    
+    images = Image.get_by_event_id(event_id)
+    
+    # Add email property to event dictionary
+    event_with_email = dict(event)
+    event_with_email['email'] = Event.get_email(event['key'])
+    
+    return render_template('admin_view_event.html', event=event_with_email, images=images)
+
+@app.route('/admin/event/delete/<int:event_id>', methods=['POST'])
+def admin_delete_event(event_id):
+    if not session.get('admin_authenticated'):
+        flash('Please login as admin first', 'error')
+        return redirect(url_for('admin_login'))
+    
+    event = Event.get_by_id(event_id)
+    if not event:
+        flash('Event not found', 'error')
+        return redirect(url_for('admin_dashboard'))
+    
+    Event.delete(event_id)
+    flash(f'Event "{event["name"]}" has been deleted', 'success')
+    return redirect(url_for('admin_dashboard'))
+
+@app.route('/admin/image/delete/<int:image_id>', methods=['POST'])
+def admin_delete_image(image_id):
+    if not session.get('admin_authenticated'):
+        flash('Please login as admin first', 'error')
+        return redirect(url_for('admin_login'))
+    
+    image = Image.get_by_id(image_id)
+    if not image:
+        flash('Image not found', 'error')
+        return redirect(url_for('admin_dashboard'))
+    
+    event_id = image['event_id']
+    Image.delete(image_id)
+    flash('Image has been deleted', 'success')
+    return redirect(url_for('admin_view_event', event_id=event_id))
 
 if __name__ == '__main__':
     app.run(debug=True)
