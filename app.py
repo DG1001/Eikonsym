@@ -269,12 +269,18 @@ def find_event():
         if not email:
             flash('Email is required', 'error')
             return redirect(url_for('find_event'))
+            
+        # Debug info
+        flash(f'Searching for event with email: {email}', 'info')
         
         # Extract event key from email
-        match = re.search(f'{GMAIL_PREFIX}([a-zA-Z0-9]+)@{GMAIL_DOMAIN}', email)
+        match = re.search(rf'{GMAIL_PREFIX}([a-zA-Z0-9]+)@{GMAIL_DOMAIN}', email)
         if not match:
-            flash('Invalid event email format', 'error')
-            return redirect(url_for('find_event'))
+            # Try a more lenient pattern as fallback
+            match = re.search(r'eikonsym\+([a-zA-Z0-9]+)@gmail\.com', email)
+            if not match:
+                flash('Invalid event email format. Please enter the complete email address (e.g., eikonsym+abc123@gmail.com)', 'error')
+                return redirect(url_for('find_event'))
         
         event_key = match.group(1)
         event = Event.get_by_key(event_key)
