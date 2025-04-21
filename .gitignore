@@ -2,3 +2,5 @@
 venv/
 __pycache__/
 events.db
+.env
+static/uploads/
