@@ -1,4 +1,4 @@
-![Eikonsym Logo](eikonsym_icon-512.png)
+![Eikonsym Logo](static/eikonsym_icon-512.png)
 
 # Eikonsym
 
