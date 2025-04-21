@@ -45,8 +45,8 @@ def init_db():
 
 # Create tables if they don't exist
 def create_tables():
-    db = get_db()
-    db.execute('''
+    conn = sqlite3.connect(app.config['DATABASE'])
+    conn.execute('''
     CREATE TABLE IF NOT EXISTS events (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
@@ -55,7 +55,7 @@ def create_tables():
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
     ''')
-    db.execute('''
+    conn.execute('''
     CREATE TABLE IF NOT EXISTS images (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         filename TEXT NOT NULL,
@@ -66,10 +66,12 @@ def create_tables():
         FOREIGN KEY (event_id) REFERENCES events (id)
     )
     ''')
-    db.commit()
+    conn.commit()
+    conn.close()
 
 # Create tables on startup
-create_tables()
+with app.app_context():
+    create_tables()
 
 class Event:
     @staticmethod
