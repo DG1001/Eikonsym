@@ -280,7 +280,7 @@ def find_event():
         event = Event.get_by_key(event_key)
         
         if not event:
-            flash('Event not found', 'error')
+            flash(f'Event not found for key: {event_key}', 'error')
             return redirect(url_for('find_event'))
         
         return redirect(url_for('view_event', event_key=event_key))
