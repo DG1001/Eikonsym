@@ -1,4 +1,4 @@
-# Eikonsym
+![Eikonsym Logo](eikonsym_icon-512.png)
 
 A Flask application for sharing photos from events via email.
 
