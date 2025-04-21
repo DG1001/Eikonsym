@@ -1,4 +1,4 @@
-# Event Photo Sharing App
+# Eikonsym
 
 A Flask application for sharing photos from events via email.
 
@@ -16,9 +16,10 @@ A Flask application for sharing photos from events via email.
    ```
    pip install -r requirements.txt
    ```
-3. Set up Gmail credentials:
+3. Set up credentials:
    - Copy `.env.example` to `.env`
    - Update with your Gmail account and app password
+   - Set an admin password for creating events
    - Note: You need to create an app password in your Google account
 
 4. Run the application:

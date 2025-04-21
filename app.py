@@ -23,6 +23,9 @@ GMAIL_PASSWORD = os.environ.get('GMAIL_APP_PASSWORD', '')
 GMAIL_PREFIX = 'eikonsym+'
 GMAIL_DOMAIN = 'gmail.com'
 
+# Admin password for creating events
+ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', 'eikonsym')
+
 def get_db():
     db = getattr(g, '_database', None)
     if db is None:
@@ -229,9 +232,14 @@ def create_event():
     if request.method == 'POST':
         name = request.form.get('name')
         description = request.form.get('description')
+        password = request.form.get('password')
         
         if not name:
             flash('Event name is required', 'error')
+            return redirect(url_for('create_event'))
+        
+        if not password or password != ADMIN_PASSWORD:
+            flash('Invalid admin password', 'error')
             return redirect(url_for('create_event'))
         
         event_key = generate_event_key()
