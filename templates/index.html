@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h2 class="text-center">Welcome to Event Photo Sharing</h2>
+            </div>
+            <div class="card-body">
+                <p class="lead text-center">
+                    Share photos from your events easily with friends and family.
+                </p>
+                
+                <div class="row mt-4">
+                    <div class="col-md-6">
+                        <div class="card mb-3">
+                            <div class="card-body text-center">
+                                <h3>Create an Event</h3>
+                                <p>Create a new event and get a unique email address to share with your guests.</p>
+                                <a href="/create_event" class="btn btn-primary">Create Event</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card mb-3">
+                            <div class="card-body text-center">
+                                <h3>Find an Event</h3>
+                                <p>Enter an event email address to view all shared photos.</p>
+                                <a href="/find_event" class="btn btn-success">Find Event</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-4">
+                    <h3>How it works:</h3>
+                    <ol>
+                        <li>Create an event and get a unique email address</li>
+                        <li>Share this email address with your friends and family</li>
+                        <li>They send photos to this email address</li>
+                        <li>All photos are collected and displayed in one place</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

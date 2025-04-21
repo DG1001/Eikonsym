@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ event.name }}{% endblock %}
+
+{% block content %}
+<div class="card mb-4">
+    <div class="card-header bg-info text-white">
+        <h2>{{ event.name }}</h2>
+    </div>
+    <div class="card-body">
+        {% if event.description %}
+            <p>{{ event.description }}</p>
+        {% endif %}
+        
+        <div class="alert alert-info">
+            <h4>Share this email address with your friends:</h4>
+            <div class="input-group mb-3">
+                <input type="text" class="form-control" value="{{ event.email }}" id="eventEmail" readonly>
+                <button class="btn btn-outline-secondary" type="button" onclick="copyToClipboard('eventEmail')">Copy</button>
+            </div>
+            <p>When they send photos to this email, they'll appear here automatically!</p>
+        </div>
+        
+        <p><small>Created on: {{ event.created_at.strftime('%Y-%m-%d %H:%M') }}</small></p>
+        
+        <form action="{{ url_for('view_event', event_key=event.key) }}" method="GET">
+            <button type="submit" class="btn btn-primary">Refresh Photos</button>
+        </form>
+    </div>
+</div>
+
+<h3>Photos ({{ images|length }})</h3>
+
+{% if images %}
+    <div class="row">
+        {% for image in images %}
+            <div class="col-md-4 image-card">
+                <div class="card">
+                    <div class="image-container">
+                        <img src="{{ url_for('static', filename='uploads/' + image.filename) }}" 
+                             alt="{{ image.original_filename }}" class="card-img-top">
+                    </div>
+                    <div class="card-body">
+                        <p class="card-text">
+                            <small>From: {{ image.sender }}</small><br>
+                            <small>Received: {{ image.received_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                        </p>
+                        <a href="{{ url_for('static', filename='uploads/' + image.filename) }}" 
+                           class="btn btn-sm btn-outline-primary" target="_blank">View Full Size</a>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="alert alert-warning">
+        No photos have been shared yet. Ask your friends to send photos to the event email address!
+    </div>
+{% endif %}
+
+<script>
+function copyToClipboard(elementId) {
+    var copyText = document.getElementById(elementId);
+    copyText.select();
+    copyText.setSelectionRange(0, 99999);
+    navigator.clipboard.writeText(copyText.value);
+    alert("Copied: " + copyText.value);
+}
+</script>
+{% endblock %}
