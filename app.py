@@ -162,6 +162,7 @@ def check_emails_for_event(event_key):
         if not event:
             return False
         
+        processed_emails = 0
         for msg_id in message_ids:
             status, msg_data = mail.fetch(msg_id, '(RFC822)')
             if status != 'OK':
@@ -172,6 +173,9 @@ def check_emails_for_event(event_key):
             
             # Get sender
             sender = msg.get("From", "Unknown")
+            
+            # Track if this email had any images
+            had_images = False
             
             # Process attachments
             for part in msg.walk():
@@ -210,6 +214,18 @@ def check_emails_for_event(event_key):
                         sender=sender,
                         event_id=event['id']
                     )
+                    
+                    had_images = True
+            
+            # Mark the email for deletion if it had images
+            if had_images:
+                mail.store(msg_id, '+FLAGS', '\\Deleted')
+                processed_emails += 1
+        
+        # Permanently remove emails marked for deletion
+        if processed_emails > 0:
+            mail.expunge()
+            flash(f"Successfully processed and deleted {processed_emails} emails", "success")
         
         return True
     
