@@ -5,12 +5,22 @@ import email
 import sqlite3
 from email.header import decode_header
 import base64
+from werkzeug.utils import secure_filename # Import secure_filename
 from flask import Flask, render_template, request, redirect, url_for, flash, session, g
 from datetime import datetime
 import re
+import warnings # Import warnings
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = secrets.token_hex(16)
+
+# Load secret key from environment or generate a default (warn if default is used outside debug)
+SECRET_KEY = os.environ.get('SECRET_KEY')
+if not SECRET_KEY:
+    SECRET_KEY = secrets.token_hex(16)
+    if os.environ.get('FLASK_ENV') == 'production' or not os.environ.get('FLASK_DEBUG'):
+         warnings.warn("WARNING: SECRET_KEY not set in environment. Using temporary key. Set a strong SECRET_KEY environment variable for production.", UserWarning)
+
+app.config['SECRET_KEY'] = SECRET_KEY
 app.config['DATABASE'] = 'events.db'
 app.config['UPLOAD_FOLDER'] = 'static/uploads'
 
@@ -249,10 +259,15 @@ def check_emails_for_event(event_key):
                 # Save the image
                 data = part.get_payload(decode=True)
                 if data:
-                    # Create a unique filename
-                    unique_filename = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{secrets.token_hex(4)}_{filename}"
+                    # Sanitize the original filename before using it
+                    safe_original_filename = secure_filename(filename)
+                    if not safe_original_filename: # Handle empty filename after sanitization
+                        safe_original_filename = "unnamed_upload"
+
+                    # Create a unique filename based on the sanitized original
+                    unique_filename = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{secrets.token_hex(4)}_{safe_original_filename}"
                     file_path = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
-                    
+
                     with open(file_path, 'wb') as f:
                         f.write(data)
                     
@@ -342,10 +357,10 @@ def find_event():
         if not email:
             flash('Email is required', 'error')
             return redirect(url_for('find_event'))
-            
-        # Debug info
-        flash(f'Searching for event with email: {email}', 'info')
-        
+
+        # Debug info - Commented out to avoid potential info disclosure
+        # flash(f'Searching for event with email: {email}', 'info')
+
         # Extract event key from email
         match = re.search(rf'{GMAIL_PREFIX}([a-zA-Z0-9]+)@{GMAIL_DOMAIN}', email)
         if not match:
@@ -389,11 +404,15 @@ def admin_dashboard():
     # Handle refresh time update
     if request.method == 'POST':
         try:
-            refresh_time = int(request.form.get('refresh_time', DEFAULT_REFRESH_TIME))
-            session['refresh_time'] = refresh_time
-            flash(f'Refresh time updated to {refresh_time} minutes', 'success')
+            refresh_time_str = request.form.get('refresh_time', str(DEFAULT_REFRESH_TIME))
+            refresh_time = int(refresh_time_str)
+            if refresh_time < 0: # Ensure refresh time is not negative
+                 flash('Refresh time cannot be negative', 'error')
+            else:
+                 session['refresh_time'] = refresh_time
+                 flash(f'Refresh time updated to {refresh_time} minutes', 'success')
         except ValueError:
-            flash('Invalid refresh time value', 'error')
+            flash('Invalid refresh time value. Please enter a number.', 'error')
     
     # Get or set the refresh time from session
     refresh_time = session.get('refresh_time', DEFAULT_REFRESH_TIME)

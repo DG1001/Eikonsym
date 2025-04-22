@@ -123,6 +123,14 @@ To use this application, you need to:
 - Images are stored in the `static/uploads` directory
 - Use environment variables for sensitive information in production
 
+## Security Considerations
+
+- **SECRET_KEY:** For production deployments, ensure you set a strong, unique `SECRET_KEY` as an environment variable. The default randomly generated key is not suitable for production, especially when running multiple server processes (like with Gunicorn), as it will lead to session invalidation.
+- **CSRF Protection:** This application currently lacks Cross-Site Request Forgery (CSRF) protection. It is highly recommended to add CSRF protection (e.g., using the `Flask-WTF` extension) to all forms that perform state-changing actions (creating events, logging in, deleting items) to prevent malicious websites from forcing users to perform unwanted actions. This requires adding the library and modifying the HTML templates to include CSRF tokens.
+- **Dependencies:** Regularly check `requirements.txt` for known vulnerabilities using tools like `pip-audit` or GitHub's Dependabot feature.
+- **File Uploads:** Filenames are sanitized using `werkzeug.utils.secure_filename`. Ensure the upload folder (`static/uploads`) has appropriate permissions on your server. Consider adding file size limits or more robust file type checking if necessary for your environment.
+- **Input Validation:** Basic input validation is performed, but review and enhance it based on your specific security requirements.
+
 ## Requirements
 
 - Python 3.6+
