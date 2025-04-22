@@ -39,6 +39,11 @@
                                 <td>{{ event.created_at }}</td>
                                 <td>
                                     <a href="{{ url_for('admin_view_event', event_id=event.id) }}" class="btn btn-sm btn-info">View</a>
+                                    <form method="POST" action="{{ url_for('admin_refresh_single_event', event_id=event.id) }}" style="display:inline;">
+                                        <button type="submit" class="btn btn-sm btn-secondary" title="Refresh this event">
+                                            <i class="bi bi-arrow-clockwise"></i> Refresh
+                                        </button>
+                                    </form>
                                     <button type="button" class="btn btn-sm btn-danger" 
                                             onclick="confirmDeleteEvent({{ event.id }}, '{{ event.name }}')">Delete</button>
                                 </td>

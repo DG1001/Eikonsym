@@ -414,6 +414,21 @@ def admin_refresh_emails():
     flash(f"Checked emails for {len(events)} events.", "success")
     return redirect(url_for('admin_dashboard'))
 
+@app.route('/admin/event/refresh/<int:event_id>', methods=['POST'])
+def admin_refresh_single_event(event_id):
+    if not session.get('admin_authenticated'):
+        flash('Please login as admin first', 'error')
+        return redirect(url_for('admin_login'))
+    event = Event.get_by_id(event_id)
+    if not event:
+        flash('Event not found', 'error')
+        return redirect(url_for('admin_dashboard'))
+    if check_emails_for_event(event['key']):
+        flash(f"Checked emails for event '{event['name']}'.", "success")
+    else:
+        flash(f"Failed to check emails for event '{event['name']}'.", "error")
+    return redirect(url_for('admin_dashboard'))
+
 @app.route('/admin/event/<int:event_id>')
 def admin_view_event(event_id):
     if not session.get('admin_authenticated'):
