@@ -452,4 +452,6 @@ def admin_delete_image(image_id):
     return redirect(url_for('admin_view_event', event_id=event_id))
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    # Bind to 0.0.0.0 to be accessible externally, e.g., within a container
+    # Use debug=False in production environments or when running with Gunicorn
+    app.run(host='0.0.0.0', debug=True)

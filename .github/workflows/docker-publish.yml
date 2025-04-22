@@ -1,0 +1,62 @@
+name: Docker Image CI
+
+on:
+  push:
+    branches: [ "main" ] # Trigger on push to the main branch
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  build_and_push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write # Needed to push to GitHub Container Registry (ghcr.io)
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    # --- Option 1: Push to Docker Hub ---
+    # Uncomment the following block to push to Docker Hub
+    # Replace 'your-dockerhub-username' with your actual Docker Hub username
+    # You'll need to add DOCKERHUB_USERNAME and DOCKERHUB_TOKEN secrets to your GitHub repository settings
+    # - name: Log in to Docker Hub
+    #   uses: docker/login-action@v3
+    #   with:
+    #     username: ${{ secrets.DOCKERHUB_USERNAME }}
+    #     password: ${{ secrets.DOCKERHUB_TOKEN }}
+    #
+    # - name: Build and push to Docker Hub
+    #   uses: docker/build-push-action@v5
+    #   with:
+    #     context: .
+    #     push: true
+    #     tags: your-dockerhub-username/eikonsym:latest # Replace with your desired image name
+
+    # --- Option 2: Push to GitHub Container Registry (ghcr.io) ---
+    # Uncomment the following block to push to GHCR
+    # Replace 'your-github-username' or 'your-org-name' with your GitHub username or organization name
+    # The GITHUB_TOKEN is automatically available to the workflow
+    - name: Log in to GitHub Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Build and push to GitHub Container Registry
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: true
+        tags: ghcr.io/${{ github.repository_owner }}/eikonsym:latest # Example: ghcr.io/your-username/your-repo-name:latest
+        # You can add more tags, like the git sha:
+        # tags: |
+        #   ghcr.io/${{ github.repository_owner }}/eikonsym:latest
+        #   ghcr.io/${{ github.repository_owner }}/eikonsym:${{ github.sha }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max

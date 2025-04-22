@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    container_name: eikonsym_web
+    ports:
+      # Map host port 80 to container port 5000 (Gunicorn)
+      # Use 8080:5000 for local testing if port 80 is taken
+      - "80:5000"
+    volumes:
+      # Mount the database file for persistence
+      - ./events.db:/app/events.db
+      # Mount the uploads directory for persistence
+      - ./static/uploads:/app/static/uploads
+    env_file:
+      # Load environment variables from .env file
+      - .env
+    restart: unless-stopped
+
+volumes:
+  # Define named volumes if you prefer them over bind mounts
+  # event_db_data:
+  # event_uploads_data:
+
+# If using named volumes, adjust the volumes section in the service:
+#    volumes:
+#      - event_db_data:/app/events.db
+#      - event_uploads_data:/app/static/uploads

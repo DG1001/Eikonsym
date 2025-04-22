@@ -1,0 +1,38 @@
+# Git files
+.git
+.gitignore
+
+# Docker files
+Dockerfile
+.dockerignore
+docker-compose.yml
+
+# Python cache and virtual environment
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+
+# Database file (should be mounted as a volume, not copied)
+events.db
+events.db-journal # SQLite journal file
+
+# Uploads (should be mounted as a volume)
+static/uploads/
+
+# IDE / OS files
+.idea/
+.vscode/
+*.swp
+*~
+.DS_Store
+
+# Secrets
+.env
+
+# Aider specific files
+.aider*
