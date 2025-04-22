@@ -7,9 +7,11 @@
     <div class="card-header bg-danger text-white d-flex justify-content-between align-items-center">
         <h2>Admin Dashboard</h2>
         <div>
-            <button id="refreshButton" class="btn btn-light me-2" onclick="window.location.reload()">
-                <i class="bi bi-arrow-clockwise"></i> Refresh Now
-            </button>
+            <form id="refreshForm" method="POST" action="{{ url_for('admin_refresh_emails') }}" style="display:inline;">
+                <button id="refreshButton" class="btn btn-light me-2" type="submit">
+                    <i class="bi bi-arrow-clockwise"></i> Refresh Now
+                </button>
+            </form>
         </div>
     </div>
     <div class="card-body">

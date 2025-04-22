@@ -401,6 +401,19 @@ def admin_dashboard():
     events = Event.get_all()
     return render_template('admin_dashboard.html', events=events)
 
+@app.route('/admin/refresh_emails', methods=['POST'])
+def admin_refresh_emails():
+    if not session.get('admin_authenticated'):
+        flash('Please login as admin first', 'error')
+        return redirect(url_for('admin_login'))
+    events = Event.get_all()
+    refreshed = 0
+    for event in events:
+        if check_emails_for_event(event['key']):
+            refreshed += 1
+    flash(f"Checked emails for {len(events)} events.", "success")
+    return redirect(url_for('admin_dashboard'))
+
 @app.route('/admin/event/<int:event_id>')
 def admin_view_event(event_id):
     if not session.get('admin_authenticated'):
