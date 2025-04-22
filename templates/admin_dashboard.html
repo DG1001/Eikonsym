@@ -27,6 +27,7 @@
                             <th>Name</th>
                             <th>Key</th>
                             <th>Created</th>
+                            <th>Images</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -37,6 +38,7 @@
                                 <td>{{ event.name }}</td>
                                 <td>{{ event.key }}</td>
                                 <td>{{ event.created_at }}</td>
+                                <td>{{ event.image_count }}</td>
                                 <td>
                                     <a href="{{ url_for('admin_view_event', event_id=event.id) }}" class="btn btn-sm btn-info">View</a>
                                     <form method="POST" action="{{ url_for('admin_refresh_single_event', event_id=event.id) }}" style="display:inline;">

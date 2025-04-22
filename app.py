@@ -399,7 +399,13 @@ def admin_dashboard():
         return redirect(url_for('admin_login'))
     
     events = Event.get_all()
-    return render_template('admin_dashboard.html', events=events)
+    # Add image count for each event
+    events_with_counts = []
+    for event in events:
+        event_dict = dict(event)
+        event_dict['image_count'] = len(Image.get_by_event_id(event['id']))
+        events_with_counts.append(event_dict)
+    return render_template('admin_dashboard.html', events=events_with_counts)
 
 @app.route('/admin/refresh_emails', methods=['POST'])
 def admin_refresh_emails():
