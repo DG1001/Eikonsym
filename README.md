@@ -1,6 +1,6 @@
 ![Eikonsym Logo](static/eikonsym_icon-512.png)
 
-# Eikonsym
+# Eikonsym [![Docker Image CI](https://github.com/DG1001/Eikonsym/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/DG1001/Eikonsym/actions/workflows/docker-publish.yml)
 
 A Flask application for sharing photos from events via email. Eikonsym makes it easy to collect and display photos from your events in one central location.
 
