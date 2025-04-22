@@ -33,6 +33,60 @@ A Flask application for sharing photos from events via email. Eikonsym makes it 
    flask run
    ```
 
+## Deployment with Docker
+
+This project includes a `Dockerfile` and `docker-compose.yml` for easy containerization and deployment. A GitHub Actions workflow (`.github/workflows/docker-publish.yml`) is also configured to automatically build and push the Docker image to a container registry (Docker Hub or GitHub Container Registry) on pushes to the `main` branch.
+
+### Prerequisites
+
+- Docker installed on your server/local machine.
+- Docker Compose installed on your server/local machine.
+
+### Building the Image
+
+The Docker image is automatically built and pushed by the GitHub Actions workflow. You need to:
+
+1.  **Choose a Registry:** In `.github/workflows/docker-publish.yml`, uncomment either the Docker Hub or GitHub Container Registry (GHCR) section.
+2.  **Configure Secrets (if needed):**
+    *   **Docker Hub:** Add `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` secrets to your GitHub repository settings.
+    *   **GHCR:** No secrets are needed by default if pushing to your own repository's package registry.
+3.  **Push to `main`:** Pushing changes to the `main` branch will trigger the workflow, build the image, and push it to your chosen registry (e.g., `ghcr.io/your-username/eikonsym:latest`).
+
+### Running on a Server
+
+1.  **SSH into your server.**
+2.  **Install Docker and Docker Compose.**
+3.  **Create a directory for the application:**
+    ```bash
+    mkdir eikonsym-app && cd eikonsym-app
+    ```
+4.  **Copy `docker-compose.yml` to this directory.**
+5.  **Create a `.env` file** in this directory with your production credentials (copy from `.env.example` and fill in):
+    ```dotenv
+    # .env file contents
+    GMAIL_USER=your_email@gmail.com
+    GMAIL_APP_PASSWORD=your_gmail_app_password
+    ADMIN_PASSWORD=your_event_creation_password
+    ADMIN_MASTER_PASSWORD=your_master_admin_password
+    # Optional: Set Flask secret key if you want it fixed
+    # SECRET_KEY=a_very_strong_random_secret_key
+    ```
+    *Ensure this file is **not** committed to Git.*
+6.  **Create placeholder files/directories for volumes** (Docker usually handles this, but doing it manually ensures correct permissions initially):
+    ```bash
+    touch events.db
+    mkdir -p static/uploads
+    ```
+7.  **Pull the latest image** from your registry:
+    *   *GHCR Example:* `docker pull ghcr.io/your-github-username/eikonsym:latest`
+    *   *Docker Hub Example:* `docker pull your-dockerhub-username/eikonsym:latest`
+    *(You might need to `docker login ghcr.io` or `docker login` first).*
+8.  **Start the application:**
+    ```bash
+    docker compose up -d
+    ```
+    The application will be accessible on port 80 (or the host port specified in `docker-compose.yml`). The database (`events.db`) and uploads (`static/uploads/`) will persist on the host machine within the `eikonsym-app` directory.
+
 ## Gmail Setup
 
 To use this application, you need to:
