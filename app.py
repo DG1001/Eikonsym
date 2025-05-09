@@ -6,9 +6,11 @@ import sqlite3
 from email.header import decode_header
 import base64
 from werkzeug.utils import secure_filename # Import secure_filename
-from flask import Flask, render_template, request, redirect, url_for, flash, session, g
+from flask import Flask, render_template, request, redirect, url_for, flash, session, g, send_file
 from datetime import datetime
 import re
+import zipfile
+import io
 import warnings # Import warnings
 
 app = Flask(__name__)
@@ -345,6 +347,45 @@ def view_event(event_key):
     event_with_email['email'] = Event.get_email(event_key)
     
     return render_template('view_event.html', event=event_with_email, images=images)
+
+@app.route('/event/<event_key>/download_all')
+def download_all_images(event_key):
+    event = Event.get_by_key(event_key)
+    if not event:
+        flash('Event not found', 'error')
+        return redirect(url_for('index'))
+
+    images = Image.get_by_event_id(event['id'])
+    if not images:
+        flash('No images to download for this event.', 'info')
+        return redirect(url_for('view_event', event_key=event_key))
+
+    memory_file = io.BytesIO()
+    # Sanitize event name for use in filename, fallback to event_key if name is empty
+    safe_event_name = secure_filename(event['name']) if event['name'] else event_key
+    zip_filename = f"{safe_event_name}_images.zip"
+
+    with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_DEFLATED) as zf:
+        for image in images:
+            file_path = os.path.join(app.config['UPLOAD_FOLDER'], image['filename'])
+            if os.path.exists(file_path):
+                # Use original filename if available and not empty, otherwise use the stored unique filename
+                arcname = image['original_filename'] if image['original_filename'] else image['filename']
+                # Ensure arcname is just a filename (security measure)
+                arcname = os.path.basename(arcname)
+                zf.write(file_path, arcname=arcname)
+            else:
+                # Log a warning if a file listed in DB is not found on disk
+                app.logger.warning(f"File not found for image ID {image['id']} at path: {file_path}")
+    
+    memory_file.seek(0)
+    
+    return send_file(
+        memory_file,
+        download_name=zip_filename,
+        as_attachment=True,
+        mimetype='application/zip'
+    )
 
 @app.route('/find_event', methods=['GET', 'POST'])
 def find_event():

@@ -25,7 +25,11 @@
     </div>
 </div>
 
-<h3>Photos ({{ images|length }})</h3>
+<h3>Photos ({{ images|length }})
+    {% if images %}
+        <a href="{{ url_for('download_all_images', event_key=event.key) }}" class="btn btn-sm btn-success ms-2" title="Download all photos as ZIP">Download All as ZIP</a>
+    {% endif %}
+</h3>
 
 {% if images %}
     <div class="row">
