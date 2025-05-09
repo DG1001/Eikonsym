@@ -1,9 +1,38 @@
 {% extends 'base.html' %}
 
+{% block body_class %}homepage{% endblock %}
+
+{% block additional_styles %}
+<style>
+body.homepage {
+    background-image: url("{{ url_for('static', filename='images/home_background.jpg') }}");
+    background-size: cover;
+    background-position: center center;
+    background-repeat: no-repeat;
+    background-attachment: fixed; /* Keeps the background fixed while scrolling */
+    min-height: 100vh; /* Ensures background covers full viewport height */
+}
+.homepage .card.home-main-card {
+    background-color: rgba(255, 255, 255, 0.9); /* Main card background - semi-transparent white */
+}
+/* The existing inline style on .card-header will make it solid #e6f2ff */
+
+/* Style for nested cards (Create Event, Find Event) within the home-main-card */
+.homepage .home-main-card .card {
+    background-color: rgba(255, 255, 255, 0.85); /* Slightly different transparency or color for nested cards */
+}
+/* Ensure text within nested cards remains readable */
+.homepage .home-main-card .card .card-body h3,
+.homepage .home-main-card .card .card-body p {
+    color: #333; /* Or another color that contrasts well with the semi-transparent background */
+}
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="row justify-content-center">
     <div class="col-md-8">
-        <div class="card">
+        <div class="card home-main-card"> {/* Added home-main-card class */}
             <div class="card-header" style="background-color: #e6f2ff; color: #333;">
                 <div class="text-center">
                     <img src="/static/eikonsym_icon-512.png" height="100" width="100" class="mb-3 home-logo" alt="Eikonsym Logo">
